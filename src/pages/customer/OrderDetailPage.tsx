@@ -4,7 +4,9 @@ import { ArrowLeft, Loader2, Truck, Store, MapPin, Banknote, CheckCircle2, Clock
 import { CustomerLayout } from '@/components/layouts/CustomerLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ProductThumb } from '@/components/customer/ProductThumb';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProductsByIds } from '@/lib/product-image';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -88,7 +90,12 @@ export default function OrderDetailPage() {
         payment = paymentData;
       }
 
-      return { order, settings, payment };
+      // Batch fetch product images
+      const orderItems = (order.items as unknown as OrderItem[]) || [];
+      const productIds = orderItems.map((item) => item.product_id);
+      const productsMap = await fetchProductsByIds(productIds);
+
+      return { order, settings, payment, productsMap };
     },
     enabled: !!orderId && !!user,
   });
@@ -167,6 +174,7 @@ export default function OrderDetailPage() {
   const timeline = order.shipping_method === 'COURIER' ? TIMELINE_COURIER : TIMELINE_PICKUP;
   const currentStatusIndex = timeline.indexOf(order.order_status);
   const payment = orderData?.payment;
+  const productsMap = orderData?.productsMap;
 
   // Check if QRIS payment needs action
   const isQrisUnpaid = order.payment_method === 'QRIS' && order.payment_status === 'UNPAID';
@@ -294,20 +302,30 @@ export default function OrderDetailPage() {
             <Package className="h-4 w-4" /> Detail Pesanan
           </h2>
           <div className="space-y-3">
-            {items.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <div>
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-muted-foreground">
-                    {item.qty} x Rp {item.price.toLocaleString('id-ID')}
+            {items.map((item, index) => {
+              const product = productsMap?.get(item.product_id);
+              return (
+                <div key={index} className="flex gap-3">
+                  <ProductThumb
+                    images={product?.images}
+                    name={item.name}
+                    size="lg"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.qty} x Rp {item.price.toLocaleString('id-ID')}
+                    </p>
+                    {item.notes && (
+                      <p className="text-xs text-muted-foreground italic mt-1">"{item.notes}"</p>
+                    )}
+                  </div>
+                  <p className="font-medium text-sm">
+                    Rp {item.subtotal.toLocaleString('id-ID')}
                   </p>
-                  {item.notes && (
-                    <p className="text-xs text-muted-foreground italic">"{item.notes}"</p>
-                  )}
                 </div>
-                <p className="font-medium">Rp {item.subtotal.toLocaleString('id-ID')}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
