@@ -1,15 +1,24 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardList, Loader2, Truck, Store, ChevronRight } from 'lucide-react';
 import { CustomerLayout } from '@/components/layouts/CustomerLayout';
 import { EmptyState } from '@/components/customer/EmptyState';
+import { ThumbnailStack } from '@/components/customer/ProductThumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProductsByIds } from '@/lib/product-image';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+
+interface OrderItem {
+  product_id: string;
+  name: string;
+  qty: number;
+}
 
 const ONGOING_STATUSES = ['NEW', 'CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP'];
 const COMPLETED_STATUSES = ['COMPLETED', 'CANCELED'];
@@ -53,23 +62,50 @@ export default function OrdersPage() {
     enabled: !!user,
   });
 
+  // Extract all unique product IDs from all orders
+  const allProductIds = useMemo(() => {
+    if (!orders) return [];
+    const ids = new Set<string>();
+    orders.forEach((order) => {
+      const items = (order.items as unknown as OrderItem[]) || [];
+      items.forEach((item) => ids.add(item.product_id));
+    });
+    return Array.from(ids);
+  }, [orders]);
+
+  // Batch fetch all products for thumbnails
+  const { data: productsMap } = useQuery({
+    queryKey: ['orders-products', allProductIds],
+    queryFn: () => fetchProductsByIds(allProductIds),
+    enabled: allProductIds.length > 0,
+  });
+
   const ongoingOrders = orders?.filter((o) => ONGOING_STATUSES.includes(o.order_status)) || [];
   const completedOrders = orders?.filter((o) => COMPLETED_STATUSES.includes(o.order_status)) || [];
 
   const OrderCard = ({ order }: { order: typeof orders extends (infer T)[] | undefined ? T : never }) => {
     if (!order) return null;
     
+    const items = (order.items as unknown as OrderItem[]) || [];
+    
     return (
       <div
         className="bg-card rounded-2xl p-4 shadow-card cursor-pointer transition-transform active:scale-[0.99]"
         onClick={() => navigate(`/orders/${order.id}`)}
       >
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <p className="font-semibold text-sm">{order.order_code}</p>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(order.created_at), 'd MMM yyyy, HH:mm', { locale: localeId })}
-            </p>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <ThumbnailStack
+              items={items}
+              productsMap={productsMap}
+              maxVisible={3}
+            />
+            <div>
+              <p className="font-semibold text-sm">{order.order_code}</p>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(order.created_at), 'd MMM yyyy, HH:mm', { locale: localeId })}
+              </p>
+            </div>
           </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </div>

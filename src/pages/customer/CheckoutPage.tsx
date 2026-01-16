@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ProductThumb } from '@/components/customer/ProductThumb';
 import { useCart } from '@/lib/cart';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProductsByIds } from '@/lib/product-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -75,6 +77,14 @@ export default function CheckoutPage() {
 
       return { store, settings };
     },
+  });
+
+  // Batch fetch product images for cart items
+  const productIds = items.map((item) => item.product_id);
+  const { data: productsMap } = useQuery({
+    queryKey: ['checkout-products', productIds],
+    queryFn: () => fetchProductsByIds(productIds),
+    enabled: productIds.length > 0,
   });
 
   const store = storeData?.store;
@@ -412,21 +422,32 @@ export default function CheckoutPage() {
         {/* Order Summary */}
         <div className="bg-card rounded-2xl p-4 shadow-card mb-4">
           <h2 className="font-semibold mb-3">Ringkasan Pesanan</h2>
-          <div className="space-y-2 text-sm">
-            {items.map((item) => (
-              <div key={item.product_id} className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {item.name} x{item.qty}
-                </span>
-                <span>Rp {(item.price * item.qty).toLocaleString('id-ID')}</span>
-              </div>
-            ))}
-            <div className="border-t border-border pt-2 mt-2">
-              <div className="flex justify-between">
+          <div className="space-y-3">
+            {items.map((item) => {
+              const product = productsMap?.get(item.product_id);
+              return (
+                <div key={item.product_id} className="flex items-center gap-3">
+                  <ProductThumb
+                    images={product?.images || item.image}
+                    name={item.name}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">x{item.qty}</p>
+                  </div>
+                  <p className="text-sm font-medium">
+                    Rp {(item.price * item.qty).toLocaleString('id-ID')}
+                  </p>
+                </div>
+              );
+            })}
+            <div className="border-t border-border pt-3 mt-3 space-y-1">
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span>Rp {subtotal.toLocaleString('id-ID')}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Ongkir</span>
                 <span>{shippingFee === 0 ? 'Gratis' : `Rp ${shippingFee.toLocaleString('id-ID')}`}</span>
               </div>
