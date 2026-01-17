@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingBag, Minus, Plus, ArrowLeft, Loader2 } from 'lucide-react';
@@ -6,12 +6,12 @@ import { CustomerLayout } from '@/components/layouts/CustomerLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/lib/cart';
+import { toast } from '@/hooks/use-toast';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { addItem, updateQty, getItemQty } = useCart();
-  const [localQty, setLocalQty] = useState(1);
+  const { addItem, updateQty, removeItem, getItemQty } = useCart();
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', slug],
@@ -32,11 +32,66 @@ export default function ProductDetailPage() {
   const isInCart = cartQty > 0;
 
   // Get first image from images array
-  const getProductImage = () => {
+  const getProductImage = useCallback(() => {
     if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
       return product.images[0] as string;
     }
     return null;
+  }, [product]);
+
+  // Debounced toast
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showDebouncedToast = useCallback(() => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => {
+      toast({
+        description: 'Keranjang diperbarui',
+        duration: 2000,
+      });
+    }, 700);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Realtime qty update functions
+  const handleIncrement = () => {
+    if (!product) return;
+    const newQty = cartQty + 1;
+    if (product.stock > 0 && newQty > product.stock) return;
+
+    if (isInCart) {
+      updateQty(product.id, newQty);
+    } else {
+      addItem({
+        product_id: product.id,
+        name: product.name,
+        price: product.price,
+        image: getProductImage() || undefined,
+        qty: 1,
+      });
+    }
+    showDebouncedToast();
+  };
+
+  const handleDecrement = () => {
+    if (!product || cartQty <= 0) return;
+    const newQty = cartQty - 1;
+
+    if (newQty <= 0) {
+      removeItem(product.id);
+    } else {
+      updateQty(product.id, newQty);
+    }
+    showDebouncedToast();
   };
 
   const handleAddToCart = () => {
@@ -46,24 +101,10 @@ export default function ProductDetailPage() {
       name: product.name,
       price: product.price,
       image: getProductImage() || undefined,
-      qty: localQty,
+      qty: 1,
     });
+    showDebouncedToast();
   };
-
-  const handleUpdateCart = () => {
-    if (!product) return;
-    updateQty(product.id, localQty);
-  };
-
-  const incrementQty = () => setLocalQty((q) => q + 1);
-  const decrementQty = () => setLocalQty((q) => Math.max(1, q - 1));
-
-  // Sync localQty with cart when product loads
-  useState(() => {
-    if (isInCart) {
-      setLocalQty(cartQty);
-    }
-  });
 
   if (isLoading) {
     return (
@@ -153,41 +194,54 @@ export default function ProductDetailPage() {
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-16 left-0 right-0 bg-background border-t p-4 z-40">
         <div className="flex items-center gap-4 max-w-lg mx-auto">
-          {/* Quantity Stepper */}
-          <div className="flex items-center gap-2 bg-muted rounded-full p-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 rounded-full"
-              onClick={decrementQty}
-              disabled={localQty <= 1}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="w-8 text-center font-semibold">{localQty}</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 rounded-full"
-              onClick={incrementQty}
-              disabled={product.stock > 0 && localQty >= product.stock}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Quantity Stepper - only show if in cart or product available */}
+          {(isInCart || product.stock > 0) && (
+            <div className="flex items-center gap-2 bg-muted rounded-full p-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full"
+                onClick={handleDecrement}
+                disabled={cartQty <= 0}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="w-8 text-center font-semibold">{cartQty}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full"
+                onClick={handleIncrement}
+                disabled={product.stock > 0 && cartQty >= product.stock}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
-          {/* Add/Update Button */}
-          <Button
-            className="flex-1 h-12 rounded-full text-base font-semibold"
-            onClick={isInCart ? handleUpdateCart : handleAddToCart}
-            disabled={product.stock <= 0}
-          >
-            {product.stock <= 0
-              ? 'Stok Habis'
-              : isInCart
-              ? 'Update Keranjang'
-              : 'Tambah ke Keranjang'}
-          </Button>
+          {/* Main Action Button */}
+          {product.stock <= 0 ? (
+            <Button
+              className="flex-1 h-12 rounded-full text-base font-semibold"
+              disabled
+            >
+              Stok Habis
+            </Button>
+          ) : isInCart ? (
+            <Button
+              className="flex-1 h-12 rounded-full text-base font-semibold"
+              onClick={() => navigate('/cart')}
+            >
+              Lihat Keranjang
+            </Button>
+          ) : (
+            <Button
+              className="flex-1 h-12 rounded-full text-base font-semibold"
+              onClick={handleAddToCart}
+            >
+              Tambah ke Keranjang
+            </Button>
+          )}
         </div>
       </div>
     </CustomerLayout>
