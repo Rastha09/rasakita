@@ -29,6 +29,8 @@ import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import AdminProductFormPage from "./pages/admin/AdminProductFormPage";
+import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
+import AdminStorePage from "./pages/admin/AdminStorePage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import PaymentsDebugPage from "./pages/admin/PaymentsDebugPage";
 
@@ -125,6 +127,16 @@ const App = () => (
               <Route path="/admin/products/:productId" element={
                 <RouteGuard allowedRoles={['ADMIN']}>
                   <AdminProductFormPage />
+                </RouteGuard>
+              } />
+              <Route path="/admin/categories" element={
+                <RouteGuard allowedRoles={['ADMIN']}>
+                  <AdminCategoriesPage />
+                </RouteGuard>
+              } />
+              <Route path="/admin/store" element={
+                <RouteGuard allowedRoles={['ADMIN']}>
+                  <AdminStorePage />
                 </RouteGuard>
               } />
               <Route path="/admin/settings" element={
