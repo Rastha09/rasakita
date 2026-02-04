@@ -41,17 +41,18 @@ function generateSlug(name: string): string {
 }
 
 export function useAdminProducts() {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
+  const storeId = storeAdmin?.store_id;
 
   return useQuery({
-    queryKey: ['admin-products', profile?.store_id],
+    queryKey: ['admin-products', storeId],
     queryFn: async () => {
-      if (!profile?.store_id) return [];
+      if (!storeId) return [];
 
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('store_id', profile.store_id)
+        .eq('store_id', storeId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -61,23 +62,24 @@ export function useAdminProducts() {
         images: Array.isArray(p.images) ? p.images as string[] : [],
       })) as Product[];
     },
-    enabled: !!profile?.store_id,
+    enabled: !!storeId,
   });
 }
 
 export function useAdminProduct(productId: string) {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
+  const storeId = storeAdmin?.store_id;
 
   return useQuery({
     queryKey: ['admin-product', productId],
     queryFn: async () => {
-      if (!profile?.store_id || !productId) return null;
+      if (!storeId || !productId) return null;
 
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('id', productId)
-        .eq('store_id', profile.store_id)
+        .eq('store_id', storeId)
         .single();
 
       if (error) throw error;
@@ -87,25 +89,26 @@ export function useAdminProduct(productId: string) {
         images: Array.isArray(data.images) ? data.images as string[] : [],
       } as Product;
     },
-    enabled: !!profile?.store_id && !!productId,
+    enabled: !!storeId && !!productId,
   });
 }
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
   const { toast } = useToast();
+  const storeId = storeAdmin?.store_id;
 
   return useMutation({
     mutationFn: async (formData: ProductFormData) => {
-      if (!profile?.store_id) throw new Error('Store not found');
+      if (!storeId) throw new Error('Store not found');
 
       const slug = generateSlug(formData.name) + '-' + Date.now();
 
       const { error } = await supabase
         .from('products')
         .insert({
-          store_id: profile.store_id,
+          store_id: storeId,
           name: formData.name,
           slug,
           price: formData.price,

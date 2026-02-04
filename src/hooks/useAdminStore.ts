@@ -28,10 +28,12 @@ export interface StoreSettings {
 }
 
 export function useAdminStore() {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const storeId = profile?.store_id;
+  
+  // Use store_id from store_admins table instead of profile
+  const storeId = storeAdmin?.store_id;
 
   const storeQuery = useQuery({
     queryKey: ['admin-store', storeId],
@@ -129,6 +131,7 @@ export function useAdminStore() {
 
   return {
     store: storeQuery.data,
+    storeId,
     settings: settingsQuery.data,
     isLoading: storeQuery.isLoading || settingsQuery.isLoading,
     updateStore,

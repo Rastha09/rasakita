@@ -33,17 +33,18 @@ export interface Order {
 }
 
 export function useAdminOrders(statusFilter?: OrderStatus) {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
+  const storeId = storeAdmin?.store_id;
 
   return useQuery({
-    queryKey: ['admin-orders', profile?.store_id, statusFilter],
+    queryKey: ['admin-orders', storeId, statusFilter],
     queryFn: async () => {
-      if (!profile?.store_id) return [];
+      if (!storeId) return [];
 
       let query = supabase
         .from('orders')
         .select('*')
-        .eq('store_id', profile.store_id)
+        .eq('store_id', storeId)
         .order('created_at', { ascending: false });
 
       if (statusFilter) {
@@ -61,23 +62,24 @@ export function useAdminOrders(statusFilter?: OrderStatus) {
         payment_status: o.payment_status as PaymentStatus,
       })) as Order[];
     },
-    enabled: !!profile?.store_id,
+    enabled: !!storeId,
   });
 }
 
 export function useAdminOrderDetail(orderId: string) {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
+  const storeId = storeAdmin?.store_id;
 
   return useQuery({
     queryKey: ['admin-order', orderId],
     queryFn: async () => {
-      if (!profile?.store_id || !orderId) return null;
+      if (!storeId || !orderId) return null;
 
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
-        .eq('store_id', profile.store_id)
+        .eq('store_id', storeId)
         .single();
 
       if (error) throw error;
@@ -89,7 +91,7 @@ export function useAdminOrderDetail(orderId: string) {
         payment_status: data.payment_status as PaymentStatus,
       } as Order;
     },
-    enabled: !!profile?.store_id && !!orderId,
+    enabled: !!storeId && !!orderId,
   });
 }
 
@@ -126,24 +128,24 @@ export function useUpdateOrderStatus() {
 }
 
 export function useAdminDashboardStats() {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
+  const storeId = storeAdmin?.store_id;
 
   return useQuery({
-    queryKey: ['admin-dashboard', profile?.store_id],
+    queryKey: ['admin-dashboard', storeId],
     queryFn: async () => {
-      if (!profile?.store_id) {
+      if (!storeId) {
         return { newOrders: 0, processing: 0, completedToday: 0, revenueToday: 0 };
       }
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayISO = today.toISOString();
 
       // Fetch all orders for this store
       const { data: orders, error } = await supabase
         .from('orders')
         .select('order_status, payment_status, total, created_at')
-        .eq('store_id', profile.store_id);
+        .eq('store_id', storeId);
 
       if (error) throw error;
 
@@ -167,6 +169,6 @@ export function useAdminDashboardStats() {
 
       return { newOrders, processing, completedToday, revenueToday };
     },
-    enabled: !!profile?.store_id,
+    enabled: !!storeId,
   });
 }

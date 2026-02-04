@@ -18,7 +18,7 @@ export function RouteGuard({
   requireAuth = false,
   customerOnly = false 
 }: RouteGuardProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, storeAdmin, loading, isSuperAdmin, isStoreAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -36,10 +36,10 @@ export function RouteGuard({
 
   // If this is a customer-only route and user is logged in with ADMIN/SUPER_ADMIN role
   if (customerOnly && user && profile) {
-    if (profile.role === 'SUPER_ADMIN') {
+    if (isSuperAdmin()) {
       return <Navigate to="/superadmin" replace />;
     }
-    if (profile.role === 'ADMIN') {
+    if (isStoreAdmin()) {
       return <Navigate to="/admin" replace />;
     }
   }
@@ -50,19 +50,30 @@ export function RouteGuard({
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    if (!allowedRoles.includes(profile.role)) {
-      // Redirect to appropriate dashboard based on role
-      switch (profile.role) {
-        case 'SUPER_ADMIN':
-          return <Navigate to="/superadmin" replace />;
-        case 'ADMIN':
-          return <Navigate to="/admin" replace />;
-        case 'CUSTOMER':
-        default:
-          // For customers, redirect to default store
-          return <Navigate to="/makka-bakerry" replace />;
-      }
+    // Check for SUPER_ADMIN
+    if (allowedRoles.includes('SUPER_ADMIN') && isSuperAdmin()) {
+      return <>{children}</>;
     }
+
+    // Check for ADMIN (store admin)
+    if (allowedRoles.includes('ADMIN') && isStoreAdmin()) {
+      return <>{children}</>;
+    }
+
+    // Check for CUSTOMER
+    if (allowedRoles.includes('CUSTOMER') && profile.role === 'CUSTOMER') {
+      return <>{children}</>;
+    }
+
+    // No matching role found - redirect based on actual role
+    if (isSuperAdmin()) {
+      return <Navigate to="/superadmin" replace />;
+    }
+    if (isStoreAdmin()) {
+      return <Navigate to="/admin" replace />;
+    }
+    // Default for customers
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

@@ -11,10 +11,10 @@ export interface Category {
 }
 
 export function useAdminCategories() {
-  const { profile } = useAuth();
+  const { storeAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const storeId = profile?.store_id;
+  const storeId = storeAdmin?.store_id;
 
   const categoriesQuery = useQuery({
     queryKey: ['admin-categories', storeId],

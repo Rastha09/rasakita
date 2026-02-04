@@ -24,6 +24,16 @@ export interface Profile {
   store?: Store | null;
 }
 
+export interface StoreAdmin {
+  id: string;
+  store_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+  store?: Store | null;
+  profile?: Profile | null;
+}
+
 export interface DashboardStats {
   totalStores: number;
   totalUsers: number;
@@ -135,16 +145,13 @@ export function useSuperAdmin() {
     },
   });
 
-  // Users
+  // Users (profiles)
   const usersQuery = useQuery({
     queryKey: ['superadmin-users'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          store:stores(id, name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -152,18 +159,72 @@ export function useSuperAdmin() {
     },
   });
 
-  const updateUserRole = useMutation({
-    mutationFn: async ({ id, role, store_id }: { id: string; role: Profile['role']; store_id?: string | null }) => {
-      const updates: Partial<Profile> = { role };
-      if (role === 'ADMIN' && store_id) {
-        updates.store_id = store_id;
-      } else if (role !== 'ADMIN') {
-        updates.store_id = null;
-      }
+  // Store Admins - separate table for admin assignments
+  const storeAdminsQuery = useQuery({
+    queryKey: ['superadmin-store-admins'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('store_admins')
+        .select(`
+          *,
+          store:stores(id, name, slug)
+        `)
+        .order('created_at', { ascending: false });
 
+      if (error) throw error;
+      return data as StoreAdmin[];
+    },
+  });
+
+  // Assign admin to store
+  const assignStoreAdmin = useMutation({
+    mutationFn: async ({ user_id, store_id }: { user_id: string; store_id: string }) => {
+      const { data, error } = await supabase
+        .from('store_admins')
+        .insert({ user_id, store_id, role: 'STORE_ADMIN' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superadmin-store-admins'] });
+      queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
+      toast({ title: 'Admin berhasil di-assign ke toko' });
+    },
+    onError: (error) => {
+      toast({ title: 'Gagal assign admin', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Remove admin from store
+  const removeStoreAdmin = useMutation({
+    mutationFn: async ({ user_id, store_id }: { user_id: string; store_id: string }) => {
+      const { error } = await supabase
+        .from('store_admins')
+        .delete()
+        .eq('user_id', user_id)
+        .eq('store_id', store_id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['superadmin-store-admins'] });
+      queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
+      toast({ title: 'Admin berhasil dihapus dari toko' });
+    },
+    onError: (error) => {
+      toast({ title: 'Gagal hapus admin', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Update user role (for SUPER_ADMIN promotion only)
+  const updateUserRole = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: Profile['role'] }) => {
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update({ role })
         .eq('id', id);
 
       if (error) throw error;
@@ -211,6 +272,12 @@ export function useSuperAdmin() {
     users: usersQuery.data || [],
     usersLoading: usersQuery.isLoading,
     updateUserRole,
+    
+    // Store Admins
+    storeAdmins: storeAdminsQuery.data || [],
+    storeAdminsLoading: storeAdminsQuery.isLoading,
+    assignStoreAdmin,
+    removeStoreAdmin,
     
     // Orders
     orders: ordersQuery.data || [],

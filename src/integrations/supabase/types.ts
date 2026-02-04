@@ -317,6 +317,38 @@ export type Database = {
           },
         ]
       }
+      store_admins: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_admins_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           open_hours: Json | null
@@ -409,6 +441,7 @@ export type Database = {
     }
     Functions: {
       generate_order_code: { Args: never; Returns: string }
+      get_admin_store_id: { Args: { p_user_id: string }; Returns: string }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -423,6 +456,10 @@ export type Database = {
       increment_sold_count: {
         Args: { p_product_id: string; p_qty: number }
         Returns: undefined
+      }
+      is_store_admin: {
+        Args: { p_store_id: string; p_user_id: string }
+        Returns: boolean
       }
       recalculate_product_rating: {
         Args: { p_product_id: string }
