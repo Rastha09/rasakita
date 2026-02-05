@@ -85,6 +85,8 @@ export function useAdminStore() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-store'] });
+      // Also invalidate customer-facing store queries to sync changes
+      queryClient.invalidateQueries({ queryKey: ['store'] });
       toast({ title: 'Informasi toko berhasil diperbarui' });
     },
     onError: (error) => {

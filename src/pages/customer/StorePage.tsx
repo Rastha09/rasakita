@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getProductThumb } from '@/lib/product-image';
+import { getProductThumb, getProductImageUrl } from '@/lib/product-image';
 
 const StorePage = () => {
   const { user, profile } = useAuth();
@@ -38,20 +38,60 @@ const StorePage = () => {
   return (
     <CustomerLayout>
       <div className="px-4 py-6">
-        {/* Hero Section */}
-        <div className="gradient-primary rounded-2xl p-6 text-primary-foreground mb-6">
-          <h1 className="text-2xl font-bold mb-2">Selamat Datang! 👋</h1>
-          <p className="text-primary-foreground/90 mb-4">
-            {user ? `Halo, ${profile?.full_name || 'Customer'}!` : `Temukan produk terbaik di ${store?.name || 'sini'}`}
-          </p>
-          {!user && (
-            <Button asChild variant="secondary" className="gap-2">
-              <Link to="/login" state={{ from: `/${storeSlug}` }}>
-                Masuk <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
-        </div>
+        {/* Store Banner & Hero */}
+        {store?.banner_path ? (
+          <div className="relative rounded-2xl overflow-hidden mb-6">
+            <img 
+              src={getProductImageUrl(store.banner_path)} 
+              alt={`${store.name} banner`}
+              className="w-full h-40 object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end gap-3">
+              {store?.logo_path && (
+                <img 
+                  src={getProductImageUrl(store.logo_path)} 
+                  alt={`${store.name} logo`}
+                  className="w-16 h-16 rounded-xl border-2 border-white object-cover shadow-lg"
+                />
+              )}
+              <div className="flex-1">
+                <h1 className="text-xl font-bold text-white">{store?.name}</h1>
+                <p className="text-white/80 text-sm">
+                  {user ? `Halo, ${profile?.full_name || 'Customer'}!` : 'Selamat datang!'}
+                </p>
+              </div>
+              {!user && (
+                <Button asChild variant="secondary" size="sm" className="gap-1">
+                  <Link to="/login" state={{ from: `/${storeSlug}` }}>
+                    Masuk <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="gradient-primary rounded-2xl p-6 text-primary-foreground mb-6">
+            {store?.logo_path && (
+              <img 
+                src={getProductImageUrl(store.logo_path)} 
+                alt={`${store.name} logo`}
+                className="w-16 h-16 rounded-xl mb-3 object-cover"
+              />
+            )}
+            <h1 className="text-2xl font-bold mb-2">Selamat Datang! 👋</h1>
+            <p className="text-primary-foreground/90 mb-4">
+              {user ? `Halo, ${profile?.full_name || 'Customer'}!` : `Temukan produk terbaik di ${store?.name || 'sini'}`}
+            </p>
+            {!user && (
+              <Button asChild variant="secondary" className="gap-2">
+                <Link to="/login" state={{ from: `/${storeSlug}` }}>
+                  Masuk <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Products */}
         <h2 className="text-lg font-semibold mb-4">Produk Populer</h2>
