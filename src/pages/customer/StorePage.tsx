@@ -47,19 +47,21 @@ const StorePage = () => {
               className="w-full h-40 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end gap-3">
-              {store?.logo_path && (
-                <img 
-                  src={getProductImageUrl(store.logo_path)} 
-                  alt={`${store.name} logo`}
-                  className="w-16 h-16 rounded-xl border-2 border-white object-cover shadow-lg"
-                />
-              )}
-              <div className="flex-1">
-                <h1 className="text-xl font-bold text-white">{store?.name}</h1>
-                <p className="text-white/80 text-sm">
-                  {user ? `Halo, ${profile?.full_name || 'Customer'}!` : 'Selamat datang!'}
-                </p>
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="flex items-center gap-3 mb-2">
+                {store?.logo_path && (
+                  <img 
+                    src={getProductImageUrl(store.logo_path)} 
+                    alt={`${store.name} logo`}
+                    className="w-16 h-16 rounded-xl border-2 border-white object-cover shadow-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold text-white">{store?.name}</h1>
+                  <p className="text-white/80 text-sm">
+                    {user ? `Halo, ${profile?.full_name || 'Customer'}!` : 'Selamat datang!'}
+                  </p>
+                </div>
               </div>
               {!user && (
                 <Button asChild variant="secondary" size="sm" className="gap-1">
