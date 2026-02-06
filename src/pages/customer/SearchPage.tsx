@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
 import { CustomerLayout } from '@/components/layouts/CustomerLayout';
 import { ProductCard } from '@/components/customer/ProductCard';
+import { CategoryFilter } from '@/components/customer/CategoryFilter';
 import { EmptyState } from '@/components/customer/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,15 +11,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getProductThumb } from '@/lib/product-image';
 import { useStoreContext } from '@/lib/store-context';
+import { useCategories } from '@/hooks/useCategories';
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const navigate = useNavigate();
   const { storeSlug } = useParams<{ storeSlug: string }>();
   const { store } = useStoreContext();
 
+  const { data: categories = [] } = useCategories(store?.id);
+
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products', 'search', query, store?.id],
+    queryKey: ['products', 'search', query, store?.id, selectedCategory],
     queryFn: async () => {
       if (!store?.id) return [];
       let q = supabase
@@ -30,6 +35,10 @@ export default function SearchPage() {
 
       if (query.trim()) {
         q = q.ilike('name', `%${query}%`);
+      }
+
+      if (selectedCategory) {
+        q = q.eq('category_id', selectedCategory);
       }
 
       const { data, error } = await q.limit(50);
@@ -68,6 +77,17 @@ export default function SearchPage() {
           )}
         </div>
 
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <div className="mb-4">
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </div>
+        )}
+
         {/* Results */}
         {isLoading ? (
           <div className="grid grid-cols-2 gap-3">
@@ -99,10 +119,10 @@ export default function SearchPage() {
         ) : (
           <EmptyState
             icon={Search}
-            title={query ? 'Produk tidak ditemukan' : 'Cari Produk'}
+            title={query || selectedCategory ? 'Produk tidak ditemukan' : 'Cari Produk'}
             description={
-              query
-                ? `Tidak ada produk dengan kata kunci "${query}"`
+              query || selectedCategory
+                ? `Tidak ada produk yang cocok dengan filter Anda`
                 : 'Ketik kata kunci untuk mencari produk'
             }
           />

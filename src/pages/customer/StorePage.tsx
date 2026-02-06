@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CustomerLayout } from '@/components/layouts/CustomerLayout';
 import { ProductCard } from '@/components/customer/ProductCard';
+import { CategoryFilter } from '@/components/customer/CategoryFilter';
 import { useAuth } from '@/lib/auth';
 import { useStoreContext } from '@/lib/store-context';
+import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
@@ -13,18 +16,26 @@ const StorePage = () => {
   const { user, profile } = useAuth();
   const { store, storeSlug } = useStoreContext();
   const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const { data: categories = [] } = useCategories(store?.id);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products', 'home', store?.id],
+    queryKey: ['products', 'home', store?.id, selectedCategory],
     queryFn: async () => {
       if (!store?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
         .eq('store_id', store.id)
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
+      
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+      
+      const { data, error } = await query.limit(50);
       if (error) throw error;
       return data;
     },
@@ -95,8 +106,23 @@ const StorePage = () => {
           </div>
         )}
 
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <div className="mb-4">
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </div>
+        )}
+
         {/* Products */}
-        <h2 className="text-lg font-semibold mb-4">Produk Populer</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          {selectedCategory 
+            ? categories.find(c => c.id === selectedCategory)?.name || 'Produk'
+            : 'Produk Populer'}
+        </h2>
         
         {isLoading ? (
           <div className="flex items-center justify-center py-10">
@@ -121,7 +147,11 @@ const StorePage = () => {
           </div>
         ) : (
           <div className="text-center py-10 text-muted-foreground">
-            <p>Belum ada produk tersedia</p>
+            <p>
+              {selectedCategory 
+                ? 'Tidak ada produk di kategori ini' 
+                : 'Belum ada produk tersedia'}
+            </p>
           </div>
         )}
       </div>
