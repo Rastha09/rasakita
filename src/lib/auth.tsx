@@ -140,9 +140,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Clear all auth state immediately before calling signOut
+    setUser(null);
+    setSession(null);
     setProfile(null);
     setStoreAdmin(null);
+    await supabase.auth.signOut();
   };
 
   const isSuperAdmin = (): boolean => {
