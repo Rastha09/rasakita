@@ -14,7 +14,7 @@ import { getProductThumb, getProductImageUrl } from '@/lib/product-image';
 
 const StorePage = () => {
   const { user, profile } = useAuth();
-  const { store, storeSlug } = useStoreContext();
+  const { store } = useStoreContext();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ const StorePage = () => {
   });
 
   const handleProductClick = (slug: string) => {
-    navigate(`/${storeSlug}/product/${slug}`);
+    navigate(`/product/${slug}`);
   };
 
   return (
@@ -76,7 +76,7 @@ const StorePage = () => {
               </div>
               {!user && (
                 <Button asChild variant="secondary" size="sm" className="gap-1">
-                  <Link to="/login" state={{ from: `/${storeSlug}` }}>
+                  <Link to="/login">
                     Masuk <ArrowRight className="h-3 w-3" />
                   </Link>
                 </Button>
@@ -98,7 +98,7 @@ const StorePage = () => {
             </p>
             {!user && (
               <Button asChild variant="secondary" className="gap-2">
-                <Link to="/login" state={{ from: `/${storeSlug}` }}>
+                <Link to="/login">
                   Masuk <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

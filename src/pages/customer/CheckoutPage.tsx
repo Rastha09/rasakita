@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { MapPin, Clock, Truck, Store, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { CustomerLayout } from '@/components/layouts/CustomerLayout';
@@ -28,75 +28,47 @@ interface AddressForm {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { storeSlug } = useParams<{ storeSlug: string }>();
   const { store } = useStoreContext();
-  const basePath = `/${storeSlug}`;
   const { items, subtotal, clearCart } = useCart();
   const { user, session } = useAuth();
 
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('COURIER');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
-  const [addressForm, setAddressForm] = useState<AddressForm>({
-    name: '',
-    phone: '',
-    address: '',
-    notes: '',
-  });
+  const [addressForm, setAddressForm] = useState<AddressForm>({ name: '', phone: '', address: '', notes: '' });
 
-  // Redirect if cart is empty
   useEffect(() => {
-    if (items.length === 0) {
-      navigate(`${basePath}/cart`);
-    }
-  }, [items, navigate, basePath]);
+    if (items.length === 0) navigate('/cart');
+  }, [items, navigate]);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!user) {
       toast.error('Silakan login terlebih dahulu');
-      navigate('/login', { state: { from: `${basePath}/checkout` } });
+      navigate('/login', { state: { from: '/checkout' } });
     }
-  }, [user, navigate, basePath]);
+  }, [user, navigate]);
 
-  // Fetch store settings using store from context
   const { data: storeData } = useQuery({
     queryKey: ['store-checkout', store?.id],
     queryFn: async () => {
       if (!store?.id) return null;
-
-      const { data: settings, error: settingsError } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('store_id', store.id)
-        .single();
-
-      if (settingsError) throw settingsError;
-
+      const { data: settings, error } = await supabase.from('store_settings').select('*').eq('store_id', store.id).single();
+      if (error) throw error;
       return { store, settings };
     },
     enabled: !!store?.id,
   });
 
-  // Batch fetch product data including stock for cart items
   const productIds = items.map((item) => item.product_id);
   const { data: productsMap, refetch: refetchProducts } = useQuery({
     queryKey: ['checkout-products', productIds],
     queryFn: async () => {
       const map = await fetchProductsByIds(productIds);
-      // Also fetch stock info
-      const { data: stockData } = await supabase
-        .from('products')
-        .select('id, name, stock')
-        .in('id', productIds);
+      const { data: stockData } = await supabase.from('products').select('id, name, stock').in('id', productIds);
       if (stockData) {
         stockData.forEach((p) => {
           const existing = map.get(p.id);
-          if (existing) {
-            (existing as any).stock = p.stock;
-            (existing as any).name = p.name;
-          } else {
-            map.set(p.id, { ...p, images: null } as any);
-          }
+          if (existing) { (existing as any).stock = p.stock; (existing as any).name = p.name; }
+          else { map.set(p.id, { ...p, images: null } as any); }
         });
       }
       return map;
@@ -106,183 +78,72 @@ export default function CheckoutPage() {
 
   const storeInfo = storeData?.store;
   const settings = storeData?.settings;
-
   const shippingFee = shippingMethod === 'COURIER' ? (settings?.shipping_fee_flat || 10000) : 0;
   const total = subtotal + shippingFee;
 
-  // COD order mutation
   const createOrderMutation = useMutation({
     mutationFn: async () => {
       if (!storeInfo || !user) throw new Error('Missing data');
-
-      const orderItems = items.map((item) => ({
-        product_id: item.product_id,
-        name: item.name,
-        price: item.price,
-        qty: item.qty,
-        notes: item.notes || null,
-        subtotal: item.price * item.qty,
-      }));
-
-      const customerAddress = shippingMethod === 'COURIER' ? {
-        name: addressForm.name,
-        phone: addressForm.phone,
-        address: addressForm.address,
-      } : null;
-
-      // Generate order code
+      const orderItems = items.map((item) => ({ product_id: item.product_id, name: item.name, price: item.price, qty: item.qty, notes: item.notes || null, subtotal: item.price * item.qty }));
+      const customerAddress = shippingMethod === 'COURIER' ? { name: addressForm.name, phone: addressForm.phone, address: addressForm.address } : null;
       const { data: orderCode, error: codeError } = await supabase.rpc('generate_order_code');
       if (codeError) throw codeError;
-
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert({
-          store_id: storeInfo.id,
-          customer_id: user.id,
-          order_code: orderCode,
-          items: orderItems,
-          subtotal,
-          shipping_fee: shippingFee,
-          total,
-          shipping_method: shippingMethod,
-          payment_method: paymentMethod,
-          payment_status: 'UNPAID',
-          order_status: 'NEW',
-          customer_address: customerAddress,
-          notes: addressForm.notes || null,
-        })
-        .select()
-        .single();
-
+      const { data: order, error } = await supabase.from('orders').insert({
+        store_id: storeInfo.id, customer_id: user.id, order_code: orderCode, items: orderItems,
+        subtotal, shipping_fee: shippingFee, total, shipping_method: shippingMethod,
+        payment_method: paymentMethod, payment_status: 'UNPAID', order_status: 'NEW',
+        customer_address: customerAddress, notes: addressForm.notes || null,
+      }).select().single();
       if (error) throw error;
       return order;
     },
-    onSuccess: (order) => {
-      clearCart();
-      toast.success('Pesanan berhasil dibuat!');
-      navigate(`${basePath}/orders/${order.id}`);
-    },
-    onError: (error) => {
-      console.error('Order error:', error);
-      toast.error('Gagal membuat pesanan. Silakan coba lagi.');
-    },
+    onSuccess: (order) => { clearCart(); toast.success('Pesanan berhasil dibuat!'); navigate(`/orders/${order.id}`); },
+    onError: (error) => { console.error('Order error:', error); toast.error('Gagal membuat pesanan. Silakan coba lagi.'); },
   });
 
-  // QRIS order mutation - creates order then redirects to payment
   const createQrisOrderMutation = useMutation({
     mutationFn: async () => {
       if (!storeInfo || !user || !session?.access_token) throw new Error('Missing data');
-
-      const orderItems = items.map((item) => ({
-        product_id: item.product_id,
-        name: item.name,
-        price: item.price,
-        qty: item.qty,
-        notes: item.notes || null,
-        subtotal: item.price * item.qty,
-      }));
-
-      const customerAddress = shippingMethod === 'COURIER' ? {
-        name: addressForm.name,
-        phone: addressForm.phone,
-        address: addressForm.address,
-      } : null;
-
-      // Generate order code
+      const orderItems = items.map((item) => ({ product_id: item.product_id, name: item.name, price: item.price, qty: item.qty, notes: item.notes || null, subtotal: item.price * item.qty }));
+      const customerAddress = shippingMethod === 'COURIER' ? { name: addressForm.name, phone: addressForm.phone, address: addressForm.address } : null;
       const { data: orderCode, error: codeError } = await supabase.rpc('generate_order_code');
       if (codeError) throw codeError;
-
-      // Create order with QRIS payment method
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert({
-          store_id: storeInfo.id,
-          customer_id: user.id,
-          order_code: orderCode,
-          items: orderItems,
-          subtotal,
-          shipping_fee: shippingFee,
-          total,
-          shipping_method: shippingMethod,
-          payment_method: 'QRIS',
-          payment_status: 'UNPAID',
-          order_status: 'NEW',
-          customer_address: customerAddress,
-          notes: addressForm.notes || null,
-        })
-        .select()
-        .single();
-
+      const { data: order, error } = await supabase.from('orders').insert({
+        store_id: storeInfo.id, customer_id: user.id, order_code: orderCode, items: orderItems,
+        subtotal, shipping_fee: shippingFee, total, shipping_method: shippingMethod,
+        payment_method: 'QRIS', payment_status: 'UNPAID', order_status: 'NEW',
+        customer_address: customerAddress, notes: addressForm.notes || null,
+      }).select().single();
       if (error) throw error;
-
-      // Create Duitku invoice
-      const invoiceResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/duitku-create-invoice`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ orderId: order.id }),
-        }
-      );
-
+      const invoiceResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/duitku-create-invoice`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ orderId: order.id }),
+      });
       const invoiceResult = await invoiceResponse.json();
-      if (!invoiceResponse.ok) {
-        throw new Error(invoiceResult.error || 'Failed to create invoice');
-      }
-
+      if (!invoiceResponse.ok) throw new Error(invoiceResult.error || 'Failed to create invoice');
       return order;
     },
-    onSuccess: (order) => {
-      clearCart();
-      toast.success('Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
-      navigate(`${basePath}/payment/${order.id}`);
-    },
-    onError: (error) => {
-      console.error('QRIS Order error:', error);
-      toast.error('Gagal membuat pesanan. Silakan coba lagi.');
-    },
+    onSuccess: (order) => { clearCart(); toast.success('Pesanan berhasil dibuat! Silakan lakukan pembayaran.'); navigate(`/payment/${order.id}`); },
+    onError: (error) => { console.error('QRIS Order error:', error); toast.error('Gagal membuat pesanan. Silakan coba lagi.'); },
   });
 
   const handleSubmit = async () => {
     if (shippingMethod === 'COURIER') {
-      if (!addressForm.name || !addressForm.phone || !addressForm.address) {
-        toast.error('Lengkapi data pengiriman');
-        return;
-      }
+      if (!addressForm.name || !addressForm.phone || !addressForm.address) { toast.error('Lengkapi data pengiriman'); return; }
     }
-
-    // Validate stock before creating order
     await refetchProducts();
-    
     for (const item of items) {
       const product = productsMap?.get(item.product_id) as any;
       const stock = product?.stock ?? 0;
-      if (item.qty > stock) {
-        toast.error(`Stok tidak cukup untuk ${item.name} (tersisa ${stock})`);
-        return;
-      }
+      if (item.qty > stock) { toast.error(`Stok tidak cukup untuk ${item.name} (tersisa ${stock})`); return; }
     }
-
-    if (paymentMethod === 'QRIS') {
-      createQrisOrderMutation.mutate();
-    } else {
-      createOrderMutation.mutate();
-    }
+    if (paymentMethod === 'QRIS') { createQrisOrderMutation.mutate(); } else { createOrderMutation.mutate(); }
   };
 
   const isLoading = createOrderMutation.isPending || createQrisOrderMutation.isPending;
 
   if (!storeInfo || !settings) {
-    return (
-      <CustomerLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </CustomerLayout>
-    );
+    return (<CustomerLayout><div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></CustomerLayout>);
   }
 
   return (
@@ -295,32 +156,14 @@ export default function CheckoutPage() {
           <h2 className="font-semibold mb-3">Metode Pengiriman</h2>
           <div className="grid grid-cols-2 gap-3">
             {settings.shipping_courier_enabled && (
-              <button
-                className={cn(
-                  'flex flex-col items-center p-4 rounded-2xl border-2 transition-colors',
-                  shippingMethod === 'COURIER'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-card'
-                )}
-                onClick={() => setShippingMethod('COURIER')}
-              >
+              <button className={cn('flex flex-col items-center p-4 rounded-2xl border-2 transition-colors', shippingMethod === 'COURIER' ? 'border-primary bg-primary/5' : 'border-border bg-card')} onClick={() => setShippingMethod('COURIER')}>
                 <Truck className={cn('h-6 w-6 mb-2', shippingMethod === 'COURIER' ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="text-sm font-medium">Kurir Toko</span>
-                <span className="text-xs text-muted-foreground">
-                  Rp {settings.shipping_fee_flat.toLocaleString('id-ID')}
-                </span>
+                <span className="text-xs text-muted-foreground">Rp {settings.shipping_fee_flat.toLocaleString('id-ID')}</span>
               </button>
             )}
             {settings.shipping_pickup_enabled && (
-              <button
-                className={cn(
-                  'flex flex-col items-center p-4 rounded-2xl border-2 transition-colors',
-                  shippingMethod === 'PICKUP'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-card'
-                )}
-                onClick={() => setShippingMethod('PICKUP')}
-              >
+              <button className={cn('flex flex-col items-center p-4 rounded-2xl border-2 transition-colors', shippingMethod === 'PICKUP' ? 'border-primary bg-primary/5' : 'border-border bg-card')} onClick={() => setShippingMethod('PICKUP')}>
                 <Store className={cn('h-6 w-6 mb-2', shippingMethod === 'PICKUP' ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="text-sm font-medium">Ambil di Tempat</span>
                 <span className="text-xs text-muted-foreground">Gratis</span>
@@ -329,61 +172,19 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Address Form (for COURIER) */}
         {shippingMethod === 'COURIER' && (
           <div className="mb-6 space-y-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <MapPin className="h-4 w-4" /> Alamat Pengiriman
-            </h2>
-            <div>
-              <Label htmlFor="name">Nama Penerima</Label>
-              <Input
-                id="name"
-                value={addressForm.name}
-                onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
-                placeholder="Nama lengkap"
-                className="mt-1 rounded-xl"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">No. Telepon</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={addressForm.phone}
-                onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                placeholder="08xxxxxxxxxx"
-                className="mt-1 rounded-xl"
-              />
-            </div>
-            <div>
-              <Label htmlFor="address">Alamat Lengkap</Label>
-              <Textarea
-                id="address"
-                value={addressForm.address}
-                onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
-                placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota"
-                className="mt-1 rounded-xl min-h-[80px]"
-              />
-            </div>
+            <h2 className="font-semibold flex items-center gap-2"><MapPin className="h-4 w-4" /> Alamat Pengiriman</h2>
+            <div><Label htmlFor="name">Nama Penerima</Label><Input id="name" value={addressForm.name} onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })} placeholder="Nama lengkap" className="mt-1 rounded-xl" /></div>
+            <div><Label htmlFor="phone">No. Telepon</Label><Input id="phone" type="tel" value={addressForm.phone} onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="mt-1 rounded-xl" /></div>
+            <div><Label htmlFor="address">Alamat Lengkap</Label><Textarea id="address" value={addressForm.address} onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })} placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota" className="mt-1 rounded-xl min-h-[80px]" /></div>
           </div>
         )}
 
-        {/* Pickup Info (for PICKUP) */}
         {shippingMethod === 'PICKUP' && (
           <div className="mb-6 bg-muted/50 rounded-2xl p-4">
-            <h2 className="font-semibold flex items-center gap-2 mb-2">
-              <Store className="h-4 w-4" /> Lokasi Pengambilan
-            </h2>
-            <p className="text-sm text-muted-foreground mb-2">
-              {settings.pickup_address || store.address || 'Alamat toko akan dikonfirmasi'}
-            </p>
-            {settings.open_hours && Object.keys(settings.open_hours).length > 0 && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Lihat jam operasional di detail toko</span>
-              </div>
-            )}
+            <h2 className="font-semibold flex items-center gap-2 mb-2"><Store className="h-4 w-4" /> Lokasi Pengambilan</h2>
+            <p className="text-sm text-muted-foreground mb-2">{settings.pickup_address || store?.address || 'Alamat toko akan dikonfirmasi'}</p>
           </div>
         )}
 
@@ -392,42 +193,20 @@ export default function CheckoutPage() {
           <h2 className="font-semibold mb-3">Metode Pembayaran</h2>
           <div className="grid grid-cols-2 gap-3">
             {settings.payment_cod_enabled && (
-              <button
-                className={cn(
-                  'flex flex-col items-center p-4 rounded-2xl border-2 transition-colors',
-                  paymentMethod === 'COD'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-card'
-                )}
-                onClick={() => setPaymentMethod('COD')}
-              >
+              <button className={cn('flex flex-col items-center p-4 rounded-2xl border-2 transition-colors', paymentMethod === 'COD' ? 'border-primary bg-primary/5' : 'border-border bg-card')} onClick={() => setPaymentMethod('COD')}>
                 <Banknote className={cn('h-6 w-6 mb-2', paymentMethod === 'COD' ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="text-sm font-medium">COD</span>
                 <span className="text-xs text-muted-foreground">Bayar di Tempat</span>
               </button>
             )}
             {settings.payment_qris_enabled ? (
-              <button
-                className={cn(
-                  'flex flex-col items-center p-4 rounded-2xl border-2 transition-colors',
-                  paymentMethod === 'QRIS'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-card'
-                )}
-                onClick={() => setPaymentMethod('QRIS')}
-              >
+              <button className={cn('flex flex-col items-center p-4 rounded-2xl border-2 transition-colors', paymentMethod === 'QRIS' ? 'border-primary bg-primary/5' : 'border-border bg-card')} onClick={() => setPaymentMethod('QRIS')}>
                 <CreditCard className={cn('h-6 w-6 mb-2', paymentMethod === 'QRIS' ? 'text-primary' : 'text-muted-foreground')} />
                 <span className="text-sm font-medium">QRIS</span>
                 <span className="text-xs text-muted-foreground">Scan & Bayar</span>
               </button>
             ) : (
-              <button
-                className={cn(
-                  'flex flex-col items-center p-4 rounded-2xl border-2 transition-colors opacity-50 cursor-not-allowed',
-                  'border-border bg-card'
-                )}
-                disabled
-              >
+              <button className="flex flex-col items-center p-4 rounded-2xl border-2 transition-colors opacity-50 cursor-not-allowed border-border bg-card" disabled>
                 <CreditCard className="h-6 w-6 mb-2 text-muted-foreground" />
                 <span className="text-sm font-medium">QRIS</span>
                 <span className="text-xs text-muted-foreground">Tidak Tersedia</span>
@@ -436,17 +215,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Notes */}
-        <div className="mb-6">
-          <Label htmlFor="notes">Catatan Pesanan (opsional)</Label>
-          <Textarea
-            id="notes"
-            value={addressForm.notes}
-            onChange={(e) => setAddressForm({ ...addressForm, notes: e.target.value })}
-            placeholder="Catatan tambahan untuk pesanan Anda..."
-            className="mt-1 rounded-xl"
-          />
-        </div>
+        <div className="mb-6"><Label htmlFor="notes">Catatan Pesanan (opsional)</Label><Textarea id="notes" value={addressForm.notes} onChange={(e) => setAddressForm({ ...addressForm, notes: e.target.value })} placeholder="Catatan tambahan untuk pesanan Anda..." className="mt-1 rounded-xl" /></div>
 
         {/* Order Summary */}
         <div className="bg-card rounded-2xl p-4 shadow-card mb-4">
@@ -456,56 +225,28 @@ export default function CheckoutPage() {
               const product = productsMap?.get(item.product_id);
               return (
                 <div key={item.product_id} className="flex items-center gap-3">
-                  <ProductThumb
-                    images={product?.images || item.image}
-                    name={item.name}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">x{item.qty}</p>
-                  </div>
-                  <p className="text-sm font-medium">
-                    Rp {(item.price * item.qty).toLocaleString('id-ID')}
-                  </p>
+                  <ProductThumb images={product?.images || item.image} name={item.name} size="md" />
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{item.name}</p><p className="text-xs text-muted-foreground">x{item.qty}</p></div>
+                  <p className="text-sm font-medium">Rp {(item.price * item.qty).toLocaleString('id-ID')}</p>
                 </div>
               );
             })}
             <div className="border-t border-border pt-3 mt-3 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>Rp {subtotal.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ongkir</span>
-                <span>{shippingFee === 0 ? 'Gratis' : `Rp ${shippingFee.toLocaleString('id-ID')}`}</span>
-              </div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>Rp {subtotal.toLocaleString('id-ID')}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Ongkir</span><span>{shippingFee === 0 ? 'Gratis' : `Rp ${shippingFee.toLocaleString('id-ID')}`}</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sticky Bottom */}
       <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border p-4 safe-bottom z-40">
         <div className="flex items-center justify-between mb-3">
           <span className="text-muted-foreground">Total</span>
-          <span className="text-xl font-bold text-primary">
-            Rp {total.toLocaleString('id-ID')}
-          </span>
+          <span className="text-lg font-bold text-primary">Rp {total.toLocaleString('id-ID')}</span>
         </div>
-        <Button
-          className="w-full h-12 rounded-full text-base font-semibold"
-          onClick={handleSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Memproses...
-            </>
-          ) : (
-            'Buat Pesanan'
-          )}
+        <Button className="w-full h-12 rounded-full text-base font-semibold" onClick={handleSubmit} disabled={isLoading}>
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          {isLoading ? 'Memproses...' : 'Buat Pesanan'}
         </Button>
       </div>
     </CustomerLayout>

@@ -1,10 +1,7 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
 
 export function Footer() {
-  const { storeSlug } = useParams<{ storeSlug: string }>();
-  const basePath = `/${storeSlug || 'makka-bakerry'}`;
-
   return (
     <footer className="bg-muted border-t border-border px-4 py-8 text-sm text-muted-foreground">
       <div className="max-w-lg mx-auto space-y-5">
@@ -31,9 +28,9 @@ export function Footer() {
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <Link to={`${basePath}/tentang-kami`} className="hover:text-foreground transition-colors">Tentang Kami</Link>
-          <Link to={`${basePath}/kebijakan-privasi`} className="hover:text-foreground transition-colors">Kebijakan Privasi</Link>
-          <Link to={`${basePath}/syarat-ketentuan`} className="hover:text-foreground transition-colors">Syarat & Ketentuan</Link>
+          <Link to="/tentang-kami" className="hover:text-foreground transition-colors">Tentang Kami</Link>
+          <Link to="/kebijakan-privasi" className="hover:text-foreground transition-colors">Kebijakan Privasi</Link>
+          <Link to="/syarat-ketentuan" className="hover:text-foreground transition-colors">Syarat & Ketentuan</Link>
         </div>
 
         <p className="text-xs text-muted-foreground/70 pt-2 border-t border-border">
