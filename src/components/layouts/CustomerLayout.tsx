@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Search, ClipboardList, ShoppingCart, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CartBadge } from '@/components/customer/CartBadge';
+import { Footer } from '@/components/customer/Footer';
 
 interface CustomerLayoutProps {
   children: ReactNode;
@@ -27,6 +28,9 @@ export function CustomerLayout({ children }: CustomerLayoutProps) {
       <main className="animate-fade-in">
         {children}
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-nav border-t border-border z-50 safe-bottom">

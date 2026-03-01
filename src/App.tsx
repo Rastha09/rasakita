@@ -23,6 +23,9 @@ import OrderDetailPage from "./pages/customer/OrderDetailPage";
 import AccountPage from "./pages/customer/AccountPage";
 import PaymentPage from "./pages/customer/PaymentPage";
 import ProductDetailPage from "./pages/customer/ProductDetailPage";
+import AboutPage from "./pages/customer/AboutPage";
+import PrivacyPage from "./pages/customer/PrivacyPage";
+import TermsPage from "./pages/customer/TermsPage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -107,6 +110,10 @@ const App = () => (
                     <AccountPage />
                   </RouteGuard>
                 } />
+                {/* Public pages - no auth required */}
+                <Route path="tentang-kami" element={<AboutPage />} />
+                <Route path="kebijakan-privasi" element={<PrivacyPage />} />
+                <Route path="syarat-ketentuan" element={<TermsPage />} />
               </Route>
 
               {/* Admin routes */}
