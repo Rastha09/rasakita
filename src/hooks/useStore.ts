@@ -13,33 +13,23 @@ export interface Store {
   created_at: string;
 }
 
-export function useStore(slug: string | undefined) {
+export function useStore() {
   return useQuery({
-    queryKey: ['store', slug],
+    queryKey: ['store'],
     queryFn: async () => {
-      if (!slug) return null;
-      
       const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .eq('slug', slug)
+        .eq('slug', 'makka-bakerry')
         .eq('is_active', true)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned - store not found
-          return null;
-        }
+        if (error.code === 'PGRST116') return null;
         throw error;
       }
       return data as Store;
     },
-    enabled: !!slug,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 10 * 60 * 1000,
   });
-}
-
-export function useStoreBySlug(slug: string | undefined) {
-  return useStore(slug);
 }

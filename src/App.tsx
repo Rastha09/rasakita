@@ -5,15 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
+import { StoreProvider } from "@/lib/store-context";
 import { RouteGuard } from "@/components/guards/RouteGuard";
-import { StoreLayout } from "@/components/layouts/StoreLayout";
 
 // Pages
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Customer Pages (Dynamic Store)
+// Customer Pages
 import StorePage from "./pages/customer/StorePage";
 import SearchPage from "./pages/customer/SearchPage";
 import CartPage from "./pages/customer/CartPage";
@@ -40,7 +40,6 @@ import PaymentsDebugPage from "./pages/admin/PaymentsDebugPage";
 
 // Super Admin Pages
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
-import SuperAdminStoresPage from "./pages/superadmin/SuperAdminStoresPage";
 import SuperAdminUsersPage from "./pages/superadmin/SuperAdminUsersPage";
 import SuperAdminOrdersPage from "./pages/superadmin/SuperAdminOrdersPage";
 import SuperAdminSettingsPage from "./pages/superadmin/SuperAdminSettingsPage";
@@ -50,152 +49,148 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Redirect root to default store */}
-              <Route path="/" element={<Navigate to="/makka-bakerry" replace />} />
-              
-              {/* Dynamic Store Routes - validates store exists via StoreLayout */}
-              <Route path="/:storeSlug" element={<StoreLayout />}>
+      <StoreProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Customer Routes - single business, no store slug */}
                 <Route index element={
                   <RouteGuard customerOnly>
                     <StorePage />
                   </RouteGuard>
                 } />
-                <Route path="search" element={
+                <Route path="/search" element={
                   <RouteGuard customerOnly>
                     <SearchPage />
                   </RouteGuard>
                 } />
-                <Route path="product/:slug" element={
+                <Route path="/product/:slug" element={
                   <RouteGuard customerOnly>
                     <ProductDetailPage />
                   </RouteGuard>
                 } />
-                <Route path="cart" element={
+                <Route path="/cart" element={
                   <RouteGuard customerOnly>
                     <CartPage />
                   </RouteGuard>
                 } />
-                <Route path="checkout" element={
+                <Route path="/checkout" element={
                   <RouteGuard requireAuth customerOnly>
                     <CheckoutPage />
                   </RouteGuard>
                 } />
-                <Route path="orders" element={
+                <Route path="/orders" element={
                   <RouteGuard requireAuth customerOnly>
                     <OrdersPage />
                   </RouteGuard>
                 } />
-                <Route path="orders/:orderId" element={
+                <Route path="/orders/:orderId" element={
                   <RouteGuard requireAuth customerOnly>
                     <OrderDetailPage />
                   </RouteGuard>
                 } />
-                <Route path="payment/:orderId" element={
+                <Route path="/payment/:orderId" element={
                   <RouteGuard requireAuth customerOnly>
                     <PaymentPage />
                   </RouteGuard>
                 } />
-                <Route path="account" element={
+                <Route path="/account" element={
                   <RouteGuard requireAuth>
                     <AccountPage />
                   </RouteGuard>
                 } />
-                {/* Public pages - no auth required */}
-                <Route path="tentang-kami" element={<AboutPage />} />
-                <Route path="kebijakan-privasi" element={<PrivacyPage />} />
-                <Route path="syarat-ketentuan" element={<TermsPage />} />
-              </Route>
+                {/* Public pages */}
+                <Route path="/tentang-kami" element={<AboutPage />} />
+                <Route path="/kebijakan-privasi" element={<PrivacyPage />} />
+                <Route path="/syarat-ketentuan" element={<TermsPage />} />
 
-              {/* Admin routes */}
-              <Route path="/admin" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminDashboard />
-                </RouteGuard>
-              } />
-              <Route path="/admin/orders" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminOrdersPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/orders/:orderId" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminOrderDetailPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/products" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminProductsPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/products/:productId" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminProductFormPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/categories" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminCategoriesPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/store" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminStorePage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/settings" element={
-                <RouteGuard allowedRoles={['ADMIN']}>
-                  <AdminSettingsPage />
-                </RouteGuard>
-              } />
-              <Route path="/admin/settings/payments-debug" element={
-                <RouteGuard allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
-                  <PaymentsDebugPage />
-                </RouteGuard>
-              } />
+                {/* Legacy store slug redirect */}
+                <Route path="/makka-bakerry" element={<Navigate to="/" replace />} />
+                <Route path="/makka-bakerry/*" element={<Navigate to="/" replace />} />
 
-              {/* Super Admin routes */}
-              <Route path="/superadmin" element={
-                <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                  <SuperAdminDashboard />
-                </RouteGuard>
-              } />
-              <Route path="/superadmin/stores" element={
-                <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                  <SuperAdminStoresPage />
-                </RouteGuard>
-              } />
-              <Route path="/superadmin/users" element={
-                <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                  <SuperAdminUsersPage />
-                </RouteGuard>
-              } />
-              <Route path="/superadmin/orders" element={
-                <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                  <SuperAdminOrdersPage />
-                </RouteGuard>
-              } />
-              <Route path="/superadmin/settings" element={
-                <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                  <SuperAdminSettingsPage />
-                </RouteGuard>
-              } />
+                {/* Admin routes */}
+                <Route path="/admin" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminDashboard />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/orders" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminOrdersPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/orders/:orderId" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminOrderDetailPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/products" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminProductsPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/products/:productId" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminProductFormPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/categories" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminCategoriesPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/store" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminStorePage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/settings" element={
+                  <RouteGuard allowedRoles={['ADMIN']}>
+                    <AdminSettingsPage />
+                  </RouteGuard>
+                } />
+                <Route path="/admin/settings/payments-debug" element={
+                  <RouteGuard allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
+                    <PaymentsDebugPage />
+                  </RouteGuard>
+                } />
 
-              {/* 404 fallback */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
+                {/* Super Admin routes */}
+                <Route path="/superadmin" element={
+                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminDashboard />
+                  </RouteGuard>
+                } />
+                <Route path="/superadmin/users" element={
+                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminUsersPage />
+                  </RouteGuard>
+                } />
+                <Route path="/superadmin/orders" element={
+                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminOrdersPage />
+                  </RouteGuard>
+                } />
+                <Route path="/superadmin/settings" element={
+                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminSettingsPage />
+                  </RouteGuard>
+                } />
+
+                {/* 404 fallback */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CartProvider>
+      </StoreProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

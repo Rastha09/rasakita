@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/customer/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getProductThumb } from '@/lib/product-image';
 import { useStoreContext } from '@/lib/store-context';
 import { useCategories } from '@/hooks/useCategories';
@@ -17,7 +17,6 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { storeSlug } = useParams<{ storeSlug: string }>();
   const { store } = useStoreContext();
 
   const { data: categories = [] } = useCategories(store?.id);
@@ -49,7 +48,7 @@ export default function SearchPage() {
   });
 
   const handleProductClick = (slug: string) => {
-    navigate(`/${storeSlug}/product/${slug}`);
+    navigate(`/product/${slug}`);
   };
 
   return (
