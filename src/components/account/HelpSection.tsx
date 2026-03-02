@@ -32,13 +32,13 @@ const FAQ_ITEMS = [
 
 export function HelpSection() {
   const handleWhatsApp = () => {
-    const phone = '6281234567890'; // Replace with actual support number
+    const phone = '628568821474'; // Replace with actual support number
     const message = encodeURIComponent('Halo, saya butuh bantuan terkait pesanan saya.');
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
 
   const handleEmail = () => {
-    window.open('mailto:support@rasakita.com?subject=Butuh%20Bantuan', '_blank');
+    window.open('mailto:cs@rasakita.my.id?subject=Butuh%20Bantuan', '_blank');
   };
 
   return (
