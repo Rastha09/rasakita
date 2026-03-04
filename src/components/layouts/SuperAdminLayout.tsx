@@ -8,12 +8,17 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
-  BarChart3
+  BarChart3,
+  Package,
+  Wallet,
+  FileBarChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { NotificationBell } from '@/components/admin/NotificationBell';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 
 interface SuperAdminLayoutProps {
   children: ReactNode;
@@ -22,7 +27,11 @@ interface SuperAdminLayoutProps {
 const menuItems = [
   { path: '/superadmin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { path: '/superadmin/users', icon: Users, label: 'Users' },
-  { path: '/superadmin/orders', icon: BarChart3, label: 'Pesanan' },
+  { path: '/superadmin/toko', icon: Store, label: 'Kelola Toko' },
+  { path: '/superadmin/produk', icon: Package, label: 'Semua Produk' },
+  { path: '/superadmin/orders', icon: BarChart3, label: 'Pesanan', badge: true },
+  { path: '/superadmin/keuangan', icon: Wallet, label: 'Keuangan' },
+  { path: '/superadmin/laporan', icon: FileBarChart, label: 'Laporan' },
   { path: '/superadmin/settings', icon: Settings, label: 'Pengaturan' },
 ];
 
@@ -30,6 +39,8 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { signOut, profile } = useAuth();
+  const { stats } = useSuperAdmin();
+  const newOrders = stats?.newOrders ?? 0;
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
@@ -63,14 +74,20 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               to={item.path}
               onClick={() => setOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative",
                 active 
                   ? "bg-sidebar-primary text-sidebar-primary-foreground" 
                   : "text-sidebar-foreground hover:bg-sidebar-accent"
               )}
             >
+              {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />}
               <Icon className="h-5 w-5" />
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium flex-1">{item.label}</span>
+              {item.badge && newOrders > 0 && (
+                <span className="h-5 min-w-[20px] rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-bold px-1">
+                  {newOrders}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -78,6 +95,15 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
+        <div className="flex items-center gap-3 px-3 py-2 mb-2">
+          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-bold text-sidebar-foreground">
+            {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name || 'Super Admin'}</p>
+            <p className="text-xs text-sidebar-foreground/50">Super Admin</p>
+          </div>
+        </div>
         <Button
           variant="ghost"
           className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
@@ -111,7 +137,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           
           <h1 className="font-semibold">Super Admin</h1>
           
-          <div className="w-10" /> {/* Spacer for centering */}
+          <NotificationBell />
         </div>
       </header>
 
@@ -122,6 +148,9 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:pl-72">
+        <div className="hidden lg:flex items-center justify-end h-14 px-6 border-b border-border">
+          <NotificationBell />
+        </div>
         <div className="p-4 lg:p-6 animate-fade-in">
           {children}
         </div>

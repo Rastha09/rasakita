@@ -36,6 +36,7 @@ import AdminProductFormPage from "./pages/admin/AdminProductFormPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminStorePage from "./pages/admin/AdminStorePage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import AdminLaporanPage from "./pages/admin/AdminLaporanPage";
 import PaymentsDebugPage from "./pages/admin/PaymentsDebugPage";
 
 // Super Admin Pages
@@ -43,6 +44,10 @@ import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SuperAdminUsersPage from "./pages/superadmin/SuperAdminUsersPage";
 import SuperAdminOrdersPage from "./pages/superadmin/SuperAdminOrdersPage";
 import SuperAdminSettingsPage from "./pages/superadmin/SuperAdminSettingsPage";
+import SuperAdminTokoPage from "./pages/superadmin/SuperAdminTokoPage";
+import SuperAdminProdukPage from "./pages/superadmin/SuperAdminProdukPage";
+import SuperAdminKeuanganPage from "./pages/superadmin/SuperAdminKeuanganPage";
+import SuperAdminLaporanPage from "./pages/superadmin/SuperAdminLaporanPage";
 
 const queryClient = new QueryClient();
 
@@ -60,129 +65,63 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 
-                {/* Customer Routes - single business, no store slug */}
+                {/* Customer Routes */}
                 <Route index element={
-                  <RouteGuard customerOnly>
-                    <StorePage />
-                  </RouteGuard>
+                  <RouteGuard customerOnly><StorePage /></RouteGuard>
                 } />
                 <Route path="/search" element={
-                  <RouteGuard customerOnly>
-                    <SearchPage />
-                  </RouteGuard>
+                  <RouteGuard customerOnly><SearchPage /></RouteGuard>
                 } />
                 <Route path="/product/:slug" element={
-                  <RouteGuard customerOnly>
-                    <ProductDetailPage />
-                  </RouteGuard>
+                  <RouteGuard customerOnly><ProductDetailPage /></RouteGuard>
                 } />
                 <Route path="/cart" element={
-                  <RouteGuard customerOnly>
-                    <CartPage />
-                  </RouteGuard>
+                  <RouteGuard customerOnly><CartPage /></RouteGuard>
                 } />
                 <Route path="/checkout" element={
-                  <RouteGuard requireAuth customerOnly>
-                    <CheckoutPage />
-                  </RouteGuard>
+                  <RouteGuard requireAuth customerOnly><CheckoutPage /></RouteGuard>
                 } />
                 <Route path="/orders" element={
-                  <RouteGuard requireAuth customerOnly>
-                    <OrdersPage />
-                  </RouteGuard>
+                  <RouteGuard requireAuth customerOnly><OrdersPage /></RouteGuard>
                 } />
                 <Route path="/orders/:orderId" element={
-                  <RouteGuard requireAuth customerOnly>
-                    <OrderDetailPage />
-                  </RouteGuard>
+                  <RouteGuard requireAuth customerOnly><OrderDetailPage /></RouteGuard>
                 } />
                 <Route path="/payment/:orderId" element={
-                  <RouteGuard requireAuth customerOnly>
-                    <PaymentPage />
-                  </RouteGuard>
+                  <RouteGuard requireAuth customerOnly><PaymentPage /></RouteGuard>
                 } />
                 <Route path="/account" element={
-                  <RouteGuard requireAuth>
-                    <AccountPage />
-                  </RouteGuard>
+                  <RouteGuard requireAuth><AccountPage /></RouteGuard>
                 } />
-                {/* Public pages */}
                 <Route path="/tentang-kami" element={<AboutPage />} />
                 <Route path="/kebijakan-privasi" element={<PrivacyPage />} />
                 <Route path="/syarat-ketentuan" element={<TermsPage />} />
 
-                {/* Legacy store slug redirect */}
+                {/* Legacy redirect */}
                 <Route path="/makka-bakerry" element={<Navigate to="/" replace />} />
                 <Route path="/makka-bakerry/*" element={<Navigate to="/" replace />} />
 
                 {/* Admin routes */}
-                <Route path="/admin" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminDashboard />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/orders" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminOrdersPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/orders/:orderId" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminOrderDetailPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/products" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminProductsPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/products/:productId" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminProductFormPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/categories" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminCategoriesPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/store" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminStorePage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/settings" element={
-                  <RouteGuard allowedRoles={['ADMIN']}>
-                    <AdminSettingsPage />
-                  </RouteGuard>
-                } />
-                <Route path="/admin/settings/payments-debug" element={
-                  <RouteGuard allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
-                    <PaymentsDebugPage />
-                  </RouteGuard>
-                } />
+                <Route path="/admin" element={<RouteGuard allowedRoles={['ADMIN']}><AdminDashboard /></RouteGuard>} />
+                <Route path="/admin/orders" element={<RouteGuard allowedRoles={['ADMIN']}><AdminOrdersPage /></RouteGuard>} />
+                <Route path="/admin/orders/:orderId" element={<RouteGuard allowedRoles={['ADMIN']}><AdminOrderDetailPage /></RouteGuard>} />
+                <Route path="/admin/products" element={<RouteGuard allowedRoles={['ADMIN']}><AdminProductsPage /></RouteGuard>} />
+                <Route path="/admin/products/:productId" element={<RouteGuard allowedRoles={['ADMIN']}><AdminProductFormPage /></RouteGuard>} />
+                <Route path="/admin/categories" element={<RouteGuard allowedRoles={['ADMIN']}><AdminCategoriesPage /></RouteGuard>} />
+                <Route path="/admin/store" element={<RouteGuard allowedRoles={['ADMIN']}><AdminStorePage /></RouteGuard>} />
+                <Route path="/admin/settings" element={<RouteGuard allowedRoles={['ADMIN']}><AdminSettingsPage /></RouteGuard>} />
+                <Route path="/admin/laporan" element={<RouteGuard allowedRoles={['ADMIN']}><AdminLaporanPage /></RouteGuard>} />
+                <Route path="/admin/settings/payments-debug" element={<RouteGuard allowedRoles={['ADMIN', 'SUPER_ADMIN']}><PaymentsDebugPage /></RouteGuard>} />
 
                 {/* Super Admin routes */}
-                <Route path="/superadmin" element={
-                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                    <SuperAdminDashboard />
-                  </RouteGuard>
-                } />
-                <Route path="/superadmin/users" element={
-                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                    <SuperAdminUsersPage />
-                  </RouteGuard>
-                } />
-                <Route path="/superadmin/orders" element={
-                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                    <SuperAdminOrdersPage />
-                  </RouteGuard>
-                } />
-                <Route path="/superadmin/settings" element={
-                  <RouteGuard allowedRoles={['SUPER_ADMIN']}>
-                    <SuperAdminSettingsPage />
-                  </RouteGuard>
-                } />
+                <Route path="/superadmin" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminDashboard /></RouteGuard>} />
+                <Route path="/superadmin/users" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminUsersPage /></RouteGuard>} />
+                <Route path="/superadmin/orders" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminOrdersPage /></RouteGuard>} />
+                <Route path="/superadmin/settings" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminSettingsPage /></RouteGuard>} />
+                <Route path="/superadmin/toko" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminTokoPage /></RouteGuard>} />
+                <Route path="/superadmin/produk" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminProdukPage /></RouteGuard>} />
+                <Route path="/superadmin/keuangan" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminKeuanganPage /></RouteGuard>} />
+                <Route path="/superadmin/laporan" element={<RouteGuard allowedRoles={['SUPER_ADMIN']}><SuperAdminLaporanPage /></RouteGuard>} />
 
                 {/* 404 fallback */}
                 <Route path="*" element={<NotFound />} />
