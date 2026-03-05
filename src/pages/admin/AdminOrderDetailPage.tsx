@@ -20,12 +20,14 @@ import { useAdminOrderDetail, useUpdateOrderStatus, type OrderStatus } from '@/h
 import { formatCurrency, formatDateTime } from '@/lib/format-currency';
 import { fetchProductsByIds, getProductThumb, type ProductWithImages } from '@/lib/product-image';
 
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   NEW: { label: 'Baru', variant: 'outline' },
-  PAID: { label: 'Dibayar', variant: 'default' },
+  CONFIRMED: { label: 'Dikonfirmasi', variant: 'default' },
   PROCESSING: { label: 'Diproses', variant: 'secondary' },
+  OUT_FOR_DELIVERY: { label: 'Dikirim', variant: 'default' },
+  READY_FOR_PICKUP: { label: 'Siap Diambil', variant: 'default' },
   COMPLETED: { label: 'Selesai', variant: 'outline' },
-  CANCELLED: { label: 'Dibatalkan', variant: 'destructive' },
+  CANCELED: { label: 'Dibatalkan', variant: 'destructive' },
 };
 
 export default function AdminOrderDetailPage() {
@@ -73,7 +75,7 @@ export default function AdminOrderDetailPage() {
 
   // NEW orders need to be marked as PAID (confirmed) first, or go directly to PROCESSING if COD
   const canConfirmPayment = order?.order_status === 'NEW' && order?.payment_method === 'COD';
-  const canProcess = order?.order_status === 'PAID' || (order?.order_status === 'NEW' && order?.payment_status === 'PAID');
+  const canProcess = order?.order_status === 'CONFIRMED' || (order?.order_status === 'NEW' && order?.payment_status === 'PAID');
   const canComplete = order?.order_status === 'PROCESSING';
   
   // Block processing if QRIS payment not yet paid
@@ -243,7 +245,7 @@ export default function AdminOrderDetailPage() {
           )}
           
           {/* For PAID orders - can process */}
-          {order?.order_status === 'PAID' && (
+          {order?.order_status === 'CONFIRMED' && (
             <Button 
               onClick={() => handleStatusChange('PROCESSING')} 
               className="w-full" 

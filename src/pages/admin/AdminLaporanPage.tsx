@@ -41,7 +41,7 @@ export default function AdminLaporanPage() {
 
       const allOrders = orders || [];
       const completed = allOrders.filter(o => o.order_status === 'COMPLETED');
-      const cancelled = allOrders.filter(o => o.order_status === 'CANCELLED');
+      const cancelled = allOrders.filter(o => o.order_status === 'CANCELED');
       const revenue = completed.reduce((sum, o) => sum + o.total, 0);
 
       // Daily chart data
