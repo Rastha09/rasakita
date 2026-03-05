@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 
-export type OrderStatus = 'NEW' | 'PAID' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
-export type PaymentStatus = 'UNPAID' | 'PAID' | 'FAILED';
+export type OrderStatus = 'NEW' | 'CONFIRMED' | 'PROCESSING' | 'OUT_FOR_DELIVERY' | 'READY_FOR_PICKUP' | 'COMPLETED' | 'CANCELED';
+export type PaymentStatus = 'UNPAID' | 'PAID' | 'EXPIRED' | 'FAILED' | 'REFUNDED';
 
 export interface OrderItem {
   product_id: string;
@@ -161,7 +161,7 @@ export function useAdminDashboardStats() {
       const allOrders = orders || [];
 
       // Calculate stats - NEW and PAID both count as new orders
-      const newOrders = allOrders.filter(o => o.order_status === 'NEW' || o.order_status === 'PAID').length;
+      const newOrders = allOrders.filter(o => o.order_status === 'NEW' || o.order_status === 'CONFIRMED').length;
       const processing = allOrders.filter(o => o.order_status === 'PROCESSING').length;
       
       const completedToday = allOrders.filter(o => 

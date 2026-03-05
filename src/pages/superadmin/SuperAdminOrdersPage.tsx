@@ -14,13 +14,13 @@ import { ShoppingBag, Loader2, Search } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '@/lib/format-currency';
 
 const orderStatusLabels: Record<string, string> = {
-  NEW: 'Baru', PAID: 'Dibayar', PROCESSING: 'Diproses', COMPLETED: 'Selesai', CANCELLED: 'Dibatalkan',
+  NEW: 'Baru', CONFIRMED: 'Dikonfirmasi', PROCESSING: 'Diproses', OUT_FOR_DELIVERY: 'Dikirim', READY_FOR_PICKUP: 'Siap Diambil', COMPLETED: 'Selesai', CANCELED: 'Dibatalkan',
 };
 const paymentStatusLabels: Record<string, string> = {
   UNPAID: 'Belum Bayar', PAID: 'Lunas', EXPIRED: 'Kedaluwarsa',
 };
 const orderStatusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  NEW: 'outline', PAID: 'default', PROCESSING: 'secondary', COMPLETED: 'default', CANCELLED: 'destructive',
+  NEW: 'outline', CONFIRMED: 'default', PROCESSING: 'secondary', OUT_FOR_DELIVERY: 'default', READY_FOR_PICKUP: 'default', COMPLETED: 'default', CANCELED: 'destructive',
 };
 
 export default function SuperAdminOrdersPage() {
@@ -55,9 +55,10 @@ export default function SuperAdminOrdersPage() {
               <SelectItem value="all">Semua Status</SelectItem>
               <SelectItem value="NEW">Baru</SelectItem>
               <SelectItem value="PAID">Dibayar</SelectItem>
+              <SelectItem value="CONFIRMED">Dikonfirmasi</SelectItem>
               <SelectItem value="PROCESSING">Diproses</SelectItem>
               <SelectItem value="COMPLETED">Selesai</SelectItem>
-              <SelectItem value="CANCELLED">Dibatalkan</SelectItem>
+              <SelectItem value="CANCELED">Dibatalkan</SelectItem>
             </SelectContent>
           </Select>
         </div>

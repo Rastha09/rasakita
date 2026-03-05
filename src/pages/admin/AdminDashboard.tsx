@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   ];
 
   const last3Orders = recentOrders
-    ?.filter(o => o.order_status === 'NEW' || o.order_status === 'PAID')
+    ?.filter(o => o.order_status === 'NEW' || o.order_status === 'CONFIRMED')
     .slice(0, 3) || [];
 
   const handleProcess = (orderId: string, paymentMethod: string, orderStatus: string) => {
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   };
 
   const handleReject = (orderId: string) => {
-    updateStatus.mutate({ orderId, newStatus: 'CANCELLED' });
+    updateStatus.mutate({ orderId, newStatus: 'CANCELED' });
   };
 
   return (
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
                       <p className="text-sm text-muted-foreground">Segera proses pesanan pelanggan</p>
                     </div>
                     <Button asChild>
-                      <Link to="/admin/orders?status=PAID">
+                      <Link to="/admin/orders?status=NEW">
                         Lihat <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>

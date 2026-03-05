@@ -10,12 +10,14 @@ import { useAdminOrders, useUpdateOrderStatus, useAdminDashboardStats, type Orde
 import { formatCurrency, formatDateTime } from '@/lib/format-currency';
 import { Link, useSearchParams } from 'react-router-dom';
 
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   NEW: { label: 'Baru', variant: 'outline' },
-  PAID: { label: 'Dibayar', variant: 'default' },
+  CONFIRMED: { label: 'Dikonfirmasi', variant: 'default' },
   PROCESSING: { label: 'Diproses', variant: 'secondary' },
+  OUT_FOR_DELIVERY: { label: 'Dikirim', variant: 'default' },
+  READY_FOR_PICKUP: { label: 'Siap Diambil', variant: 'default' },
   COMPLETED: { label: 'Selesai', variant: 'outline' },
-  CANCELLED: { label: 'Dibatalkan', variant: 'destructive' },
+  CANCELED: { label: 'Dibatalkan', variant: 'destructive' },
 };
 
 function OrderCard({ order }: { order: Order }) {
@@ -28,9 +30,9 @@ function OrderCard({ order }: { order: Order }) {
     updateStatus.mutate({ orderId: order.id, newStatus: 'PROCESSING', updatePayment: shouldUpdatePayment });
   };
   const handleShipped = () => updateStatus.mutate({ orderId: order.id, newStatus: 'COMPLETED' });
-  const handleReject = () => updateStatus.mutate({ orderId: order.id, newStatus: 'CANCELLED' });
+  const handleReject = () => updateStatus.mutate({ orderId: order.id, newStatus: 'CANCELED' });
 
-  const isNew = order.order_status === 'NEW' || order.order_status === 'PAID';
+  const isNew = order.order_status === 'NEW' || order.order_status === 'CONFIRMED';
   const isProcessing = order.order_status === 'PROCESSING';
 
   return (
@@ -152,10 +154,10 @@ export default function AdminOrdersPage() {
         <Tabs value={statusFilter} onValueChange={handleTabChange}>
           <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="ALL">Semua</TabsTrigger>
-            <TabsTrigger value="PAID">Baru{newCount > 0 ? ` (${newCount})` : ''}</TabsTrigger>
+            <TabsTrigger value="NEW">Baru{newCount > 0 ? ` (${newCount})` : ''}</TabsTrigger>
             <TabsTrigger value="PROCESSING">Proses</TabsTrigger>
             <TabsTrigger value="COMPLETED">Selesai</TabsTrigger>
-            <TabsTrigger value="CANCELLED">Batal</TabsTrigger>
+            <TabsTrigger value="CANCELED">Batal</TabsTrigger>
           </TabsList>
         </Tabs>
 
